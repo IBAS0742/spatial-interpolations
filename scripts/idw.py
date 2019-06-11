@@ -18,13 +18,12 @@ def euclidean_distance(shape, ind):
     y, x = shape
     xx, yy = np.meshgrid(np.arange(x), np.arange(y))
 
-    ix = np.array(ind[1]).reshape((-1, 1, 1))
-    iy = np.array(ind[0]).reshape((-1, 1, 1))
+    ix = ind[1].reshape((-1, 1, 1))
+    iy = ind[0].reshape((-1, 1, 1))
 
     dx = np.abs(iy - yy)
     dy = np.abs(ix - xx)
 
-    # return np.sqrt(np.power(dx, 2) + np.power(dy, 2))
     return np.hypot(dx, dy)
 
 
