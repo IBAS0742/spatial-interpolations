@@ -3,7 +3,7 @@
 # Date:     June, 2019
 # Author:   Marcelo Villa P.
 # Purpose:  creates a raster surface from point data by implementing an Inverse
-# #         Distance Weighting (IDW) interpolation.
+#           Distance Weighting (IDW) interpolation.
 # =============================================================================
 import numpy as np
 
@@ -15,55 +15,61 @@ def euclidean_distance(shape, ind):
     :param ind:
     :return:
     """
+    # create meshgrid
     y, x = shape
     xx, yy = np.meshgrid(np.arange(x), np.arange(y))
 
+    # reshape indices
     ix = ind[1].reshape((-1, 1, 1))
     iy = ind[0].reshape((-1, 1, 1))
 
+    # compute legs
     dx = np.abs(iy - yy)
     dy = np.abs(ix - xx)
 
     return np.hypot(dx, dy)
 
 
-def inverse_distance_weighting(z, d, ind, p=1):
+def inverse_distance_weighting(arr, p=1):
     """
 
-    :param z:   1D array with values of interest to interpolate.
-    :param d:   3D numpy array with the distance matrices for each z value.
-    :param ind: tuple with the indices of z values.
-    :param p:   power parameter
+    :param arr:
+    :param ind:
+    :param p:
     :return:
     """
 
-    np.seterr(divide='ignore', invalid='ignore')
+    # get indices of z values and compute distance matrices
+    ind = np.nonzero(arr)
+    d = euclidean_distance(arr.shape, ind)
 
-    # reshape z values to a 3D array
-    z = z.reshape(-1, 1, 1)
+    # mask distances to avoid zeros
+    mask = np.any((d == 0), axis=0)
+    d = np.ma.array(d, mask=np.broadcast_to(mask, d.shape))
 
-    u = np.sum((z / np.power(d, p)), axis=0)
-    w = np.sum((1 / np.power(d, p)), axis=0)
-    zi = u / w
+    # get z values and reshape z values to a 3D array
+    zi = arr[ind]
+    zi = zi.reshape(-1, 1, 1)
 
-    np.seterr(divide='warn', invalid='warn')
+    # compute weights and interpolated values
+    w = (1 / np.power(d, p))
+    z = np.sum(zi * w, axis=0) / np.sum(w, axis=0)
 
-    zi[ind] = z.reshape(-1)
-    return zi
+    # replace masked values with z values
+    z[ind] = zi.reshape(-1)
+
+    return np.array(z)
 
 
 if __name__ == '__main__':
 
-    arr = np.array([
-        [0, 0, 15, 0],
-        [4, 0, 0, 0],
-        [2, 0, 0, 12],
-        [0, 9, 0, 0],
-    ])
+    # create array filled with zeros
+    arr = np.zeros((1000, 1000), dtype=np.int)
 
-    shape = arr.shape
-    ind = np.nonzero(arr)
-    d = euclidean_distance(arr.shape, ind)
+    # create random values and randomly populate the array
+    n = 100
+    x = np.random.randint(40, 80, size=n)
+    arr.ravel()[np.random.choice(arr.size, n, replace=False)] = x
 
-    z = arr[ind]
-    zi = inverse_distance_weighting(arr[ind], d, ind)
+    # call IDW interpolation
+    z = inverse_distance_weighting(arr, 2)
